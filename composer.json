@@ -1,0 +1,28 @@
+{
+    "name": "marrow/ai-context",
+    "description": "Generates AGENTS.md — a live, accurate map of an Marrow app (modules, routes, config) plus Marrow-specific conventions and gotchas — for AI coding agents (and human contributors) to read before exploring the codebase.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["marrow", "framework", "ai", "agents", "agents.md", "developer-tools"],
+    "homepage": "https://github.com/marrow-framework/ai-context",
+    "support": {
+        "issues": "https://github.com/marrow-framework/ai-context/issues",
+        "source": "https://github.com/marrow-framework/ai-context"
+    },
+    "require": {
+        "php": ">=8.2",
+        "marrow/framework": "^2.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Marrow\\AiContext\\": "src/"
+        }
+    },
+    "extra": {
+        "marrow": {
+            "modules": ["Marrow\\AiContext\\AiContextModule"]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
