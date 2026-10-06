@@ -4,7 +4,7 @@
 
 # Marrow AI Context
 
-Generates `AGENTS.md` — a live, accurate map of a [Marrow](https://github.com/marrow-framework/core) app for AI coding agents and human contributors.
+Generates `AGENTS.md` (a live, accurate map of a [Marrow](https://github.com/marrow-framework/core) app) and publishes Claude Code Skills encoding Marrow best practices — for AI coding agents and human contributors.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/marrow-framework/ai-context/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/marrow-framework/ai-context/actions/workflows/ci.yml)
 [![Packagist Version](https://img.shields.io/packagist/v/marrow/ai-context?style=flat-square&label=packagist)](https://packagist.org/packages/marrow/ai-context)
@@ -25,9 +25,10 @@ read before exploring the codebase.
 ```bash
 composer require --dev marrow/ai-context
 php forge ai:context
+php forge ai:skills
 ```
 
-`ai:context` is available immediately after `composer require` — no
+Both commands are available immediately after `composer require` — no
 manual registration step, no config file. The package declares its own
 module via `extra.marrow.modules` in its own `composer.json`, picked up
 automatically by Marrow's package auto-discovery at boot.
@@ -57,7 +58,10 @@ data does.
 
 `AGENTS.md` has five sections:
 
-1. **App** — name, environment, Marrow version, PHP version.
+1. **App** — name, app version (`config('app.version')`), the *framework's*
+   own installed version (`framework_version()`, resolved from Composer —
+   correctly separate from the app's own version), environment, PHP
+   version.
 2. **Enabled modules** — every module actually registered right now,
    including ones no `config/modules.php` entry mentions (auto-discovered
    from an installed package), with their imports/exports/commands.
@@ -81,6 +85,37 @@ data does.
 If the framework's `docs/` directory can't be located (an install that
 excludes docs from the package, for instance), section 5 is skipped and a
 warning is printed — the rest of the file is still written normally.
+
+## `ai:skills` — Claude Code Skills for Marrow best practices
+
+`AGENTS.md` is prose an agent reads once, up front. A
+[Skill](https://docs.claude.com/en/docs/claude-code/skills) is a
+step-by-step procedure Claude Code loads *only when relevant* — a
+sharper tool for "how do I actually build this the Marrow way" than
+another paragraph of context.
+
+```bash
+php forge ai:skills                              # publish all five
+php forge ai:skills --only=marrow-crud,marrow-auth  # a subset
+php forge ai:skills --force                        # overwrite already-published skills
+```
+
+Writes to `.claude/skills/{name}/SKILL.md` — plain Markdown, safe to edit
+afterward (re-running never touches an already-published skill unless you
+pass `--force`; on a real terminal it asks first instead of silently
+skipping). Five ship today:
+
+| Skill | Covers |
+|---|---|
+| `marrow-module` | Scaffolding a new HMVC module — directory structure, `#[Module(...)]`, registration |
+| `marrow-crud` | A full CRUD resource — migration, model attributes, declarative form, controller, routes |
+| `marrow-auth` | Login/route-protection/RBAC — `marrow/warden` if installed, the raw `Auth\*` primitives otherwise |
+| `marrow-service-integration` | Integrating a payment provider/external API via `ServiceIntegration`/`WebhookSignature` instead of a hand-rolled client |
+| `marrow-ui-component` | Using, customizing, or creating a view component — `marrow/ui`'s three call styles and the Tailwind `@source` gotcha, or the framework's own `Component` primitives either way |
+
+Each one is self-aware of what's actually installed (checks for
+`marrow/warden`/`marrow/ui`/`marrow/form-builder` before assuming they're
+there) rather than assuming every optional package is present.
 
 ## Requirements
 
