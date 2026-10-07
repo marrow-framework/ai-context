@@ -96,7 +96,14 @@ class AiContextCommand extends Command
         $date = date('Y-m-d H:i');
         $name = (string) $this->config->get('app.name', 'Marrow app');
         $env = $this->app->environment();
-        $version = $this->app->version();
+        $appVersion = (string) $this->config->get('app.version', '');
+        // framework_version() (marrow/framework >= 2.5) resolves the real
+        // installed package version via Composer\InstalledVersions — distinct
+        // from $this->app->version() (config('app.version')), which is the
+        // *application's own* version. Conflating the two under one
+        // "Marrow version" label was a real, previously-shipped bug (see
+        // framework CHANGELOG 2.5.0) — don't reintroduce it here.
+        $frameworkVersion = function_exists('framework_version') ? framework_version() : 'unknown';
 
         return <<<MD
 # AGENTS.md
@@ -109,8 +116,9 @@ class AiContextCommand extends Command
 ## App
 
 - **Name**: {$name}
+- **App version**: {$appVersion}
+- **Framework**: marrow/framework {$frameworkVersion}
 - **Environment**: {$env}
-- **Marrow version**: {$version}
 - **PHP**: {$this->phpVersion()}
 
 
@@ -355,6 +363,44 @@ discover once.
   shadows those magic methods entirely, so `$post->title` would silently
   read an uninitialized native property instead of the model's own
   storage. Stack `#[Column('title')]` on the class itself instead.
+- **`RedirectResponse`/`JsonResponse` are genuine subtypes of `Response`**
+  (marrow/framework >= 3.0). A controller method that can return either a
+  redirect or a rendered view just declares `: Response` — never type it
+  against `Symfony\Component\HttpFoundation\Response`; `Http\Response`
+  composes Symfony's internally rather than extending it, specifically so
+  this works. See `docs/http.md`.
+- **A view extending a layout that lives in its *own* module's `Views/`
+  directory needs the module's Twig namespace prefix.** `BaseModule::
+  registerViewNamespace()` maps a module's `Views/` to `@name/...`, not the
+  default namespace (that's the app's own `resources/views/`). A module
+  view doing `{% extends "layouts/auth.html.twig" %}` for its *own*
+  `Views/layouts/auth.html.twig` silently resolves against the wrong
+  namespace and throws `Twig\Error\LoaderError` — it needs
+  `{% extends "@name/layouts/auth.html.twig" %}` instead. Only matters for
+  a layout the module ships itself; extending the *app's* shared
+  `layouts/app.html.twig` from inside a module view needs no prefix, since
+  that one actually does live in the default namespace.
+- **A Tailwind class that appears only inside an installed package's own
+  Twig templates (e.g. `marrow/ui`'s `vendor/marrow/ui/src/Views/`) needs
+  an explicit `@source` in `resources/css/app.css`.** Tailwind v4's
+  automatic content detection skips anything `.gitignore` excludes, which
+  includes `/vendor/` in every Marrow app — so without
+  `@source "../../vendor/marrow/ui/src/Views";`, that component renders
+  with none of its own styling (no visible error, just missing CSS).
+  `php forge ui:install` adds this automatically; re-run it (safe, skips
+  already-wired sections) if a `marrow/ui` component looks unstyled.
+- **Integrating a third-party service (payments, an external API)?**
+  Don't hand-roll HMAC webhook verification or a raw HTTP client call —
+  `Marrow\Support\ServiceIntegration` (base class: config-driven
+  `http()`/`verifyWebhook()`) and `Marrow\Http\Webhook\WebhookSignature`
+  (the standalone HMAC primitive it's built on) already cover both. See
+  `docs/integrations.md`.
+- **`fakerphp/faker` and `psy/psysh` are `require-dev`, not `require`**
+  (marrow/framework >= 2.4.1). A seeder calling `$this->fake()`, or
+  `php forge tinker`, silently/visibly fails on a `composer install
+  --no-dev` (production) install — expected there, but also means a CI job
+  that runs `db:seed`/`tinker` needs dev dependencies installed, not just
+  `--no-dev`.
 
 See `docs/*.md` for the full picture — this section is the "would have
 saved time to know up front" shortlist, not a replacement for it.
